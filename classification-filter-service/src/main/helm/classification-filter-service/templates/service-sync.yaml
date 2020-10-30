@@ -1,0 +1,102 @@
+# Documentation for IAM service accounts at: https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts-technical-overview.html
+#
+# A service that is equivalent to the one below will be created by: eksctl create iamserviceaccount --cluster=cef-nonprod --name=dev-sentence-service-async-service-account --namespace=dev --attach-policy-arn=arn:aws:iam::652291809580:role/dev-docker-entellect-instance-role --override-existing-serviceaccounts --region=eu-west-1 --approve
+#
+{{ if eq .Values.account "non-prod" }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: "{{.Chart.Name}}-sync-account"
+  namespace: "{{.Values.environment}}"
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::{{.Values.accountNumber}}:role/{{.Values.environment}}-docker-entellect-instance-role
+---
+{{ end }}
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: "{{.Values.environment}}-{{.Chart.Name}}-sync"
+  labels:
+    app: "{{.Chart.Name}}-sync"
+spec:
+  replicas: {{.Values.replicaCount}}
+  selector:
+    matchLabels:
+      app: "{{.Chart.Name}}-sync"
+  template:
+    metadata:
+      labels:
+        app: "{{.Chart.Name}}-sync"
+    spec:
+      serviceAccountName: "{{.Chart.Name}}-sync-account"
+      containers:
+      - name: "{{.Chart.Name}}-sync"
+        image: "{{.Values.image}}:{{.Values.imageTag}}"
+        imagePullPolicy: Always
+        command: [ "/bin/sh", "-c" ]
+        args: [ "/scripts/initialise-pod.sh" ]
+        livenessProbe:
+          initialDelaySeconds: 120
+          periodSeconds: 5
+          httpGet:
+            path: /
+            port: 8080
+        readinessProbe:
+          initialDelaySeconds: 120
+          periodSeconds: 5
+          httpGet:
+            path: /
+            port: 8080
+        resources:
+          limits:
+            memory: "1100Mi"
+          requests:
+            memory: "1100Mi"
+        volumeMounts:
+          - mountPath: /scripts/initialise-pod.sh
+            name: config
+            subPath: initialise-pod.sh
+      volumes:
+        - name: config
+          configMap:
+            name: {{.Values.environment}}-{{.Chart.Name}}-sync-configmap
+            defaultMode: 0777
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: "{{.Values.environment}}-{{.Chart.Name}}-sync"
+  namespace: "{{.Values.environment}}"
+  annotations:
+    external-dns.alpha.kubernetes.io/ttl: "60"
+spec:
+  selector:
+    app: "{{.Chart.Name}}-sync"
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+
+---
+kind: Ingress
+apiVersion: extensions/v1beta1
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/whitelist-source-range: "{{.Values.ingress.whitelistSourceRange | trim}}"
+  name: "{{.Values.environment}}-{{.Chart.Name}}-sync-ingress"
+  namespace: "{{.Values.environment}}"
+spec:
+  rules:
+    - host: "{{.Values.environment}}-{{.Values.appFunction}}-sync.{{.Values.hostedZoneDns}}"
+      http:
+        paths:
+          - backend:
+              serviceName: "{{.Values.environment}}-{{.Chart.Name}}-sync"
+              servicePort: 80
+            path: C:/Program Files/Git/classificationFilter
+          - backend:
+              serviceName: "{{.Values.environment}}-{{.Chart.Name}}-sync"
+              servicePort: 80
+            path: /health
+            

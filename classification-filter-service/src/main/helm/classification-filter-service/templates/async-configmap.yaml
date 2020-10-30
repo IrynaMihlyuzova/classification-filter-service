@@ -1,0 +1,156 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{.Values.environment}}-{{.Chart.Name}}-async-configmap"
+  labels:
+    app: "{{.Chart.Name}}-async"
+data:
+  initialise-pod.sh: |
+    #!/bin/bash
+
+    function displayAwsInfo() {
+        env | grep AWS
+        aws --version || {
+            echo "ERROR: Failed to run 'aws --version' with account number {{.Values.accountNumber}}." >&2
+            return 1
+        }
+        return 0
+    }
+
+    function verifyAwsIdentity() {
+        echo "INFO: Verifying STS caller identity ..."
+        aws sts get-caller-identity >/dev/null || {
+            echo "ERROR: failed to get STS caller identity."
+            return 1
+        }
+        echo "INFO: Verified STS caller identity OK."
+        return 0
+    }
+
+    function get_ssm_parameter() {
+        declare ssm_parameter_key="${1:?The SSM parameter key must be specified in parameter 1.}" || return 1
+        echo "INFO: Getting AWS SSM Parameter: ${ssm_parameter_key} ..." >&2
+        declare value=
+        value=$(aws ssm get-parameters \
+    --region "{{.Values.regionName}}" \
+    --names "${ssm_parameter_key}" \
+    --with-decryption \
+    --query Parameters[0].Value \
+    --output text) || {
+            echo "ERROR: Error getting AWS SSM parameter ${ssm_parameter_key}." >&2
+            return 1
+        }
+        test -z "${value}" -o "${value}" == "None" && {
+            echo "ERROR: ssm parameter key ${ssm_parameter_key} not found."
+           return 1
+        }
+        echo "INFO: Found AWS SSM Parameter: ${ssm_parameter_key} OK." >&2
+        echo "${value}"
+        return 0
+    }
+
+    function validatePreconditions() {
+        echo "INFO: Validating preconditions ..."
+        ((errors=0))
+
+        test -z "{{.Values.environment}}" && ((errors++)) && echo -e "The .Values.environment Helm variable must be set to define the name of the deployment environment."
+        test -z "{{.Values.regionName}}" && ((errors++)) && echo -e "The .Values.regionName Helm variable must be set to define the the AWS region name."
+        test -z "{{.Values.springProfile}}" && ((errors++)) && echo -e "The .Values.springProfile Helm variable must be set to define the Spring profile that is enabled."
+        test -z "{{.Values.accountNumber}}" && ((errors++)) && echo -e "The .Values.accountNumber Helm variable must be set to define the the AWS account number to use."
+        test -z "{{.Values.hostedZoneDns}}" && ((errors++)) && echo -e "The .Values.hostedZoneDns Helm variable must be set to define the  CEF DNS name."
+        test -z "{{.Values.javaMemorySettings}}" && ((errors++)) && echo -e "The .Values.javaMemorySettings Helm variable must be set to define the Java JVM memory settings."
+        test -z "{{.Values.appFunction}}" && ((errors++)) && echo -e "The .Values.appFunction Helm variable must be set to define for the docker-entrypoint.sh script."
+        test -z "{{.Values.serviceQueue}}" && ((errors++)) && echo -e "The .Values.serviceQueue Helm variable must be set to define the generic name for the service queue."
+        test -z "{{.Values.serviceQueueListenerThreadCount}}" && ((errors++)) && echo -e "The .Values.serviceQueueListenerThreadCount Helm variable must be set to define the number of queue listener threads."
+
+        test -d "${APPLICATION_ROOT_DIR}" || {
+            echo -e "ERROR: Preconditions failed. The application root directory, \"${APPLICATION_ROOT_DIR}\" does not exist."
+            ((errors++))
+        }
+
+        test -f "${APPLICATION_JAR_PATH}" || {
+            echo -e "ERROR: Preconditions failed. The application jar file, \"${APPLICATION_JAR_PATH}\" does not exist."
+            ((errors++))
+        }
+
+        test -f "${NEW_RELIC_JAR_PATH}" || {
+            echo -e "ERROR: Preconditions failed. The New Relic agent jar file, \"${NEW_RELIC_JAR_PATH}\" does not exist."
+            ((errors++))
+        }
+
+        if [[ ${errors} -eq 0 ]]; then
+           echo "INFO: Validated preconditions OK."
+           return 0
+        else
+           echo "ERROR: ${errors} preconditions failed."
+           return 1
+        fi
+    }
+
+    function showConfiguration() {
+        echo -e "The environment name is \"{{.Values.environment}}\"."
+        echo -e "The AWS Region Name is \"{{.Values.regionName}}\"."
+        echo -e "TheAWS account number is \"{{.Values.accountNumber}}\"."
+        echo -e "The The hosted zone DNS name  is \"{{.Values.hostedZoneDns}}\"."
+        echo -e "APP_FUNCTION is \"${APP_FUNCTION}\" for configuring Log4j2."
+        echo -e "The SQS service queue is \"{{.Values.serviceQueue}}\"."
+        echo -e "The number of queue listener threads is \"{{.Values.serviceQueueListenerThreadCount}}\"."
+        echo -e "The environment aware service queue is \"{{.Values.environment}}-{{.Values.serviceQueue}}\"."
+        echo -e "APPLICATION_ROOT_DIR is \"${APPLICATION_ROOT_DIR}\."
+        echo -e "APPLICATION_JAR_FILE is \"${APPLICATION_JAR_FILE}\"."
+        echo -e "APPLICATION_JAR_PATH is \"${APPLICATION_ROOT_DIR}/${APPLICATION_JAR_FILE}\"."
+        echo -e "NEW_RELIC_JAR_FILE is \"${NEW_RELIC_JAR_FILE}\"."
+        echo -e "NEW_RELIC_JAR_PATH is \"${APPLICATION_ROOT_DIR}/${NEW_RELIC_JAR_FILE}\"."
+        echo -e "The Java JVM memory settings are \"{{.Values.javaMemorySettings}}\"."
+        echo -e "The active spring profile is \"{{.Values.springProfile}}\"."
+        echo -e "The console loging level is \"${consoleLoggingLevel}\"."
+        echo -e "The file logging level is \"${fileLoggingLevel}\"."
+        echo -e "The remote logging level is \"${remoteLoggingLevel}\"."
+        echo -e "The remote logging service is \"${remoteLoggingService}\"."
+    }
+
+    APPLICATION_ROOT_DIR="${APPLICATION_ROOT_DIR:=/cef}"
+    APPLICATION_JAR_FILE="${APPLICATION_JAR_FILE:=app.jar}"
+    APPLICATION_JAR_PATH="${APPLICATION_ROOT_DIR}/${APPLICATION_JAR_FILE}"
+    NEW_RELIC_JAR_FILE="${NEW_RELIC_JAR_FILE:=newrelic.jar}"
+    NEW_RELIC_JAR_PATH="${APPLICATION_ROOT_DIR}/${NEW_RELIC_JAR_FILE}"
+    export APP_FUNCTION="{{.Values.appFunction}}-async"
+    
+    validatePreconditions || exit 1
+
+    export consoleLoggingLevel="{{.Values.consoleLoggingLevel | default "INFO"}}"
+    export fileLoggingLevel="{{.Values.fileLoggingLevel | default "INFO"}}"
+    export remoteLoggingLevel="{{.Values.remoteLoggingLevel | default "OFF"}}"
+    export remoteLoggingService="{{.Values.fluentdService | default "fluentd.kube-system"}}"
+
+    showConfiguration
+
+    displayAwsInfo || exit 1
+
+    verifyAwsIdentity || exit 1
+
+    NEW_RELIC_LICENSE_KEY=
+    NEW_RELIC_LICENSE_KEY=$(get_ssm_parameter "/{{.Values.environment}}/new-relic-licence") || exit 1
+    export NEW_RELIC_LICENSE_KEY
+    export NEW_RELIC_APP_NAME="{{.Values.appFunction}}-async"
+
+    export _JAVA_OPTIONS="{{.Values.javaMemorySettings}} \
+    -Dspring.profiles.active={{.Values.springProfile}} \
+    -DconsoleLoggingLevel=${consoleLoggingLevel} \
+    -DfileLoggingLevel=${fileLoggingLevel} \
+    -DremoteLoggingLevel=${remoteLoggingLevel} \
+    -DremoteLoggingService=${remoteLoggingService} \
+    -Denvironment={{.Values.environment}} \
+    -Dautostart.asynchronous.camel.routes=true \
+    -Dautostart.synchronous.camel.routes=false \
+    -Dsqs.environment.aware.queue={{.Values.environment}}-{{.Values.serviceQueue}} \
+    -Dsqs.queue.listener.number.of.threads={{.Values.serviceQueueListenerThreadCount}} \
+    -Daws.account.number={{.Values.accountNumber}} \
+    -DregionName={{.Values.regionName}} \
+    -Dcef.dns.name={{.Values.hostedZoneDns}}"
+
+    # Runs as PID #1 in a docker container. Docker monitors the process with pid #1; if that process exits, it's a failure.
+    java -Djava.security.egd=file:/dev/./urandom \
+    -javaagent:${NEW_RELIC_JAR_PATH} \
+    -Dcef.root=${APPLICATION_ROOT_DIR} \
+    -jar ${APPLICATION_JAR_PATH}

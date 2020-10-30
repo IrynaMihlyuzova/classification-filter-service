@@ -1,0 +1,26 @@
+environment: k8s
+appFunction: classification-filter
+hostedZoneDns: cef-nonprod.elsevier.com
+springProfile: patent
+account: non-prod
+accountNumber: 652291809580
+regionName: eu-west-1
+image: 652291809580.dkr.ecr.eu-west-1.amazonaws.com/entellect/classification-filter-service
+imageTag: 'latest'
+consoleLoggingLevel: INFO
+fileLoggingLevel: WARN
+remoteLoggingLevel: INFO
+serviceQueue: entellect-classification-filter-service
+serviceQueueListenerThreadCount: 1
+javaMemorySettings: -Xms2g -Xmx2g
+fluentdService: fluentd.kube-system
+replicaCount: 3
+ingress:
+  whitelistSourceRange: >
+    10.0.0.0/8,
+    138.12.0.0/16,
+    145.36.0.0/16,
+    172.29.0.0/16,
+    192.168.0.0/16,
+    198.176.0.0/16,
+    198.185.0.0/16

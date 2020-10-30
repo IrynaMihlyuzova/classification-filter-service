@@ -1,0 +1,18 @@
+#!/usr/bin/env groovy
+
+@Library('ces-cicd-pipeline-library@master') _
+
+import static com.elsevier.ces.jenkins.pipeline.standard.StageDefaults.smokeTest
+
+servicePipelineFor(
+    serviceName:"classification-filter-service",
+    relativeModulePath:"classification-filter-service",
+
+
+    "smokeTest": { steps, methodParameters ->
+        if(methodParameters["awsAccount"]=="511696228681" || methodParameters["awsAccount"]=="290244732740") {
+            smokeTest().call(steps, methodParameters)
+        }
+    }
+)
+

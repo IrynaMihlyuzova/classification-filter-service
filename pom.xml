@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<artifactId>cdt-ces-entellect-enrichment</artifactId>
+		<groupId>com.elsevier.ces</groupId>
+		<version>0.2.1</version>
+	</parent>
+
+	<groupId>com.elsevier.entellect</groupId>
+	<artifactId>classification-filter-service-parent</artifactId>
+	<version>0.1.0-SNAPSHOT</version>
+
+	<packaging>pom</packaging>
+
+	<properties>
+		<git.repo.name>entellect-unstructured-classification-filter-service.git</git.repo.name>
+		<project.scm.id>entellect-repository</project.scm.id>
+	</properties>
+
+	<!-- Maven Release Configuration -->
+	<scm>
+		<url>scm|git|ssh://${entellect.enrichment.services.scm.base.url}/${git.repo.name}</url>
+		<connection>scm|git|ssh://${entellect.enrichment.services.scm.base.url}/${git.repo.name}</connection>
+		<developerConnection>scm|git|ssh://${entellect.enrichment.services.scm.base.url}/${git.repo.name}</developerConnection>
+	</scm>
+
+	<distributionManagement>
+		<downloadUrl>${entellect.enrichment.services.deployment.releases.server.url}/com/elsevier/${project.artifactId}/</downloadUrl>
+		<repository>
+			<uniqueVersion>false</uniqueVersion>
+			<id>${entellect.enrichment.services.deployment.releases.server.id}</id>
+			<name>Releases</name>
+			<url>${entellect.enrichment.services.deployment.releases.server.url}</url>
+			<layout>default</layout>
+		</repository>
+		<snapshotRepository>
+			<uniqueVersion>false</uniqueVersion>
+			<id>${entellect.enrichment.services.deployment.snaphots.server.id}</id>
+			<name>Snapshots</name>
+			<url>${entellect.enrichment.services.deployment.snapshots.server.url}</url>
+			<layout>default</layout>
+		</snapshotRepository>
+	</distributionManagement>
+
+	<modules>
+		<module>classification-filter-service</module>
+		<module>classification-filter-service-smoke-test</module>
+		<!-- <module>classification-filter-service-infrastructure-test</module>
+		<module>classification-filter-service-performance-test</module> -->
+	</modules>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>com.elsevier.ces</groupId>
+				<artifactId>cdt-ces-entellect-dependencies</artifactId>
+				<version>0.1.143</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+</project>

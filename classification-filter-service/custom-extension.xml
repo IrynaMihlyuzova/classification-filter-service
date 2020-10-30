@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension
+		xmlns="https://newrelic.com/docs/java/xsd/v1.0"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="newrelic-extension extension.xsd "
+		name="custom-extension" version="1.0">
+	<instrumentation metricPrefix="ENTELLECT-CUSTOM-INSTRUMENTATION">
+		<pointcut transactionStartPoint="true">
+			<!--class name is preceded by package name-->
+			<className>org.apache.camel.processor.CamelInternalProcessor</className>
+			<method>
+				<name>process</name>
+				<parameters>
+					<type>org.apache.camel.Exchange</type>
+					<type>org.apache.camel.AsyncCallback</type>
+				</parameters>
+			</method>
+		</pointcut>
+		<pointcut transactionStartPoint="false" ignoreTransaction="false"
+							excludeFromTransactionTrace="false">
+			<className>com.elsevier.cef.common.camel.processors.PubSubMessageWithStringContentReader</className>
+			<method>
+				<name>downloadDocument</name>
+				<parameters>
+					<type>java.lang.String</type>
+				</parameters>
+			</method>
+		</pointcut>
+		<pointcut transactionStartPoint="false" ignoreTransaction="false"
+							excludeFromTransactionTrace="false">
+			<className>com.elsevier.cef.common.camel.processors.ExtractDocumentFromInput</className>
+			<method>
+				<name>process</name>
+				<parameters>
+					<type>org.apache.camel.Exchange</type>
+				</parameters>
+			</method>
+		</pointcut>
+		<pointcut transactionStartPoint="false" ignoreTransaction="false"
+							excludeFromTransactionTrace="false">
+			<className>com.elsevier.entellect.classification-filter.service.ClassificationFilterService</className>
+			<method>
+				<name>enrich</name>
+				<parameters>
+					<type>com.elsevier.cef.hexagonal.components.prod.messages.MessageWithTextAndAnnotationSets</type>
+					<type>java.util.Map</type>
+				</parameters>
+			</method>
+		</pointcut>
+		<pointcut transactionStartPoint="false" ignoreTransaction="false"
+							excludeFromTransactionTrace="false">
+			<className>com.elsevier.cef.common.camel.beans.OutputUploader</className>
+			<method>
+				<name>upload</name>
+				<parameters>
+					<type>java.lang.String</type>
+					<type>java.lang.String</type>
+					<type>java.lang.String</type>
+					<type>java.lang.String</type>
+					<type>java.lang.String</type>
+				</parameters>
+			</method>
+		</pointcut>
+	</instrumentation>
+</extension>

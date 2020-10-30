@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>com.elsevier.entellect</groupId>
+		<artifactId>classification-filter-service-parent</artifactId>
+		<version>0.1.0-SNAPSHOT</version>
+	</parent>
+
+	<groupId>com.elsevier.entellect</groupId>
+	<artifactId>classification-filter-service</artifactId>
+
+	<name>classification-filter-service</name>
+
+	<dependencies>
+		<!--======================= -->
+		<!-- Internal Dependencies -->
+		<!--======================= -->
+		<dependency>
+			<groupId>com.elsevier.ces</groupId>
+			<artifactId>cdt-ces-camel-logging-components</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.elsevier.ces</groupId>
+			<artifactId>cdt-ces-camel-jsonld-adapters-components</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.elsevier.ces</groupId>
+			<artifactId>cdt-ces-camel-claim-check-adapter-components</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.elsevier.ces</groupId>
+			<artifactId>cdt-ces-camel-rest-adapter-components</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.elsevier.ces</groupId>
+			<artifactId>cdt-ces-camel-service-common</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.elsevier.ces</groupId>
+			<artifactId>cdt-ces-annotation-splitting</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.elsevier.ces</groupId>
+			<artifactId>cdt-ces-annotation-domain-model</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.elsevier.ces</groupId>
+			<artifactId>s3-urihandlers</artifactId>
+		</dependency>
+
+		<!--======================= -->
+		<!-- Elsevier Dependencies -->
+		<!--======================= -->
+		<dependency>
+			<groupId>com.elsevier.cef</groupId>
+			<artifactId>cef-common-file-management</artifactId>
+		</dependency>
+
+		<!-- Only required to get the file management working above -->
+		<dependency>
+			<groupId>com.elsevier.cef</groupId>
+			<artifactId>cef-aws-spring-boot</artifactId>
+		</dependency>
+
+		<!-- Logging -->
+		<dependency>
+			<groupId>com.elsevier</groupId>
+			<artifactId>ces-fluentd4log4j2</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.elsevier.entellect</groupId>
+			<artifactId>unstructured-ingest-format-conversion-api</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.elsevier.entellect</groupId>
+			<artifactId>unstructured-ingest-format-conversion-tsv</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.elsevier.entellect</groupId>
+			<artifactId>unstructured-ingest-format-conversion-ldf</artifactId>
+		</dependency>
+
+		<!--========================== -->
+		<!-- Third Party Dependencies -->
+		<!--========================== -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-web</artifactId>
+		</dependency>
+
+		<!-- Apache Camel -->
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-spring-boot-starter</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-aws</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-jackson</artifactId>
+		</dependency>
+
+		<!--=============================== -->
+		<!-- Elsevier Test Dependencies -->
+		<!--=============================== -->
+		<dependency>
+			<groupId>com.elsevier.ces</groupId>
+			<artifactId>cdt-ces-word-document-flattener</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.elsevier.ces</groupId>
+			<artifactId>cdt-ces-entellect-unit-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.elsevier.smd.issuetracing</groupId>
+			<artifactId>smd-issuetracing</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.elsevier.smd.http.stepdefs</groupId>
+			<artifactId>smd-http-stepdefs</artifactId>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.mockito</groupId>
+					<artifactId>mockito-all</artifactId>
+				</exclusion>
+				<!-- Exclude and choose version for compatibility with HTTP-StepDefs -->
+				<exclusion>
+					<groupId>com.jayway.restassured</groupId>
+					<artifactId>rest-assured</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<dependency>
+			<groupId>com.jayway.restassured</groupId>
+			<artifactId>rest-assured</artifactId>
+			<!-- Exclude and choose version for compatibility with HTTP-StepDefs -->
+			<version>1.8.1</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.elsevier.ces</groupId>
+			<artifactId>cdt-ces-camel-route-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.elsevier.ces</groupId>
+			<artifactId>s3-stepdefs</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.elsevier.ces</groupId>
+			<artifactId>sqs-stepdefs</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.elsevier.ces</groupId>
+			<artifactId>cdt-ces-http-stepdefs</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.elsevier.ces</groupId>
+			<artifactId>urihandler-assertion-stepdefs</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!--=============================== -->
+		<!-- Third Party Test Dependencies -->
+		<!--=============================== -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>info.cukes</groupId>
+			<artifactId>cucumber-spring</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>buildnumber-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>

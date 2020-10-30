@@ -1,0 +1,4 @@
+apiVersion: v1
+name: classification-filter-service
+version: 1.0.0
+appVersion: 0.1.0

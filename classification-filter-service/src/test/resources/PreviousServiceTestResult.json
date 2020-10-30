@@ -1,0 +1,58 @@
+{
+  "correlationId": "1234",
+  "request": {
+    "text": "Subject:\r\n\r\ndrug-drug interactions with Saxenda® (liraglutide injection).  \r\n\r\n",
+    "annotationSets": {
+      "metadata": [
+        {
+          "start": 0,
+          "end": 79,
+          "attributes": {
+            "input": "s3://input/test.doc",
+            "created": "1970-01-01T00:00:00.000",
+            "author": "Novo Nordisk Medical Information",
+            "modified": "1970-01-01T00:00:00.000",
+            "modifiedBy": "Entellect Test",
+            "title": "Drug Interactions"
+          }
+        }
+      ],
+      "styles": [
+        {
+          "name": "span",
+          "start": 0,
+          "end": 8,
+          "attributes": {
+            "font-weight": "bold",
+            "font-size": "10.0pt"
+          }
+        },
+        {
+          "name": "span",
+          "start": 12,
+          "end": 47,
+          "attributes": {
+            "font-size": "10.0pt"
+          }
+        },
+        {
+          "name": "span",
+          "start": 47,
+          "end": 48,
+          "attributes": {
+            "vertical-align": "super",
+            "font-size": "10.0pt"
+          }
+        },
+        {
+          "name": "span",
+          "start": 48,
+          "end": 75,
+          "attributes": {
+            "font-size": "10.0pt"
+          }
+        }
+      ]
+    }
+  }
+}

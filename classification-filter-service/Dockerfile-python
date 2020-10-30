@@ -1,0 +1,122 @@
+FROM python:3.6-slim-stretch
+
+ARG JAR_FILE
+ARG GIT_SHA
+ARG APPLICATION_ROOT=/cef
+ARG PYTHON_SCRIPT_PACKAGE_FILE
+
+# All the arguments must be set and must not be empty.
+RUN echo "${JAR_FILE:?The JAR_FILE build argument must be the path to the application jar file.}" && \
+echo "${GIT_SHA:?The GIT_SHA build argument must be a Git commit SHA value (e.g. \"git rev-parse HEAD\").}" && \
+echo "${APPLICATION_ROOT}:?The APPLICATION_ROOT build argument must be the root directory for the application.}" && \
+echo "${PYTHON_SCRIPT_PACKAGE_FILE}:?The PYTHON_SCRIPT_PACKAGE_FILE build argument must be the GPT Normalization script package file.}"
+
+WORKDIR /tmp/build
+
+# Update and upgrade all packages.
+RUN mkdir -p /usr/share/man/man1 && \
+apt-get -y --allow-unauthenticated update && \
+apt-get upgrade -y --allow-unauthenticated && \
+apt-get install -y -qq apt-utils
+
+# Upgrade Python pip
+RUN python -m pip install --upgrade pip
+
+# Install OpenJDK JRE 1.8
+RUN JRE_DEPENDENCIES="apt-transport-https \
+ca-certificates \
+gnupg \
+gnupg2 \
+gnupg1 \
+wget \
+curl \
+unzip \
+ca-certificates \
+libexpat1 \
+libffi6 \
+libreadline7 \
+libsqlite3-0 \
+libssl1.1 \
+software-properties-common \
+java-common \
+libcups2 \
+liblcms2-2 \
+libjpeg62-turbo \
+libfontconfig1 \
+libnss3 \
+libfreetype6 \
+libpcsclite1 \
+libx11-6 \
+libxext6 \
+libxi6 \
+libxrender1 \
+libxtst6 \
+openjdk-8-jre-headless" && \
+apt-get install -y --no-install-recommends ${JRE_DEPENDENCIES} && \
+unset JRE_DEPENDENCIES
+
+# Delete APT data files.
+RUN rm -rf /var/lib/apt/lists/*
+
+# Download and install install AWS cli V2
+RUN  curl -sS "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+unzip awscliv2.zip && \
+./aws/install && \
+rm -f awscliv2.zip && \
+rm -rf ./aws/
+
+VOLUME /tmp
+WORKDIR ${APPLICATION_ROOT}
+
+# Delete the temporary build directory.
+RUN rm -r --interactive=never /tmp/build/ && echo "Removed temporary build directory /tmp/build OK."
+
+# Copy the application jar file and ensure it has the correct permissions.
+COPY ${JAR_FILE} ./app.jar
+RUN chmod 644 ./app.jar
+
+# Copy the invoker configuration file.
+COPY src/main/resources/invoker-configuration.yaml .
+RUN  chmod 644 ./invoker-configuration.yaml
+
+# Download and install newrelic.
+RUN curl -SsL https://download.newrelic.com/newrelic/java-agent/newrelic-agent/current/newrelic-java.zip -o newrelic-java.zip && \
+unzip newrelic-java.zip && \
+cp newrelic/newrelic.jar . && \
+cp newrelic/newrelic.yml . && \
+rm -f newrelic-java.zip && \
+rm -rf newrelic
+
+# Add the api_host entry to the newrelic.yml to aid deployment markers
+# http://docs.newrelic.com/docs/java/recording-deployments-with-the-java-agent
+# It was a deliberate choice to use SED instead of a library to edit the yaml file as this
+# is a one-off use case and SED is readily available on most *nix machines.
+# If we are having to do this more where a more complex editing is required, please explore some
+# libraries https://jlordiales.me/2016/05/24/jyparser/ OR https://yq.readthedocs.io/en/latest/ and such.
+RUN sed -i -e '/common:/a\' -e '  api_host: rpm.newrelic.com' ${APPLICATION_ROOT}/newrelic.yml
+
+# Copy the script to run as the docker entry point to the application root.
+COPY docker-entrypoint.sh .
+RUN chmod u+x ./docker-entrypoint.sh
+
+# Copy the Python package. The Python package is created in the process-resources phase of the maven build.
+COPY ${PYTHON_SCRIPT_PACKAGE_FILE} .
+
+# Unpack the GPT Normalization package and ensure the files have the correct ownership and permissions.
+RUN mkdir gpt_normalization && \
+tar zxf ${PYTHON_SCRIPT_PACKAGE_FILE} -C gpt_normalization --strip-components=1 && \
+rm -f ${PYTHON_SCRIPT_PACKAGE_FILE} && \
+chown -R root:root gpt_normalization && \
+find gpt_normalization -type d -exec chmod 755 {} \; && \
+find gpt_normalization -type f -exec chmod 644 {} \;
+
+# Install the GPT Normalization Python3 script.
+RUN cd gpt_normalization && \
+pip install -r requirements-prod.txt && \
+cd ..
+
+# Copy the git revision and application root to environment variables and make them available to the
+# docker-entrypoint.sh for deployment marking
+ENV GIT_SHA_ENV=${GIT_SHA}
+ENV APPLICATION_ROOT_ENV=${APPLICATION_ROOT}
+ENTRYPOINT ["./docker-entrypoint.sh"]

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN"
+	packages="com.elsevier.ces.fluentd4log4j2">
+	<Properties>
+		<Property name="cef.root">/cef</Property>
+	</Properties>
+
+	<Appenders>
+
+		<!-- Not normally used -->
+		<Console name="Console" target="SYSTEM_OUT">
+			<PatternLayout
+				pattern="[%d{DEFAULT}] [%t] %-5p %c.%M(%L) %x - %m%n" />
+			<ThresholdFilter
+				level="${sys:consoleLoggingLevel:-${env:consoleLoggingLevel:-OFF}}"
+				onMatch="ACCEPT" onMismatch="DENY" />
+		</Console>
+
+		<!-- Write file to cef.root/logs/application.log - rolling older log files 
+			into 15 minute chunks up to 5 hours -->
+		<RollingFile name="RollingFile"
+			fileName="${sys:cef.root}/logs/classification-filter-service.log"
+			filePattern="${sys:cef.root}/logs/classification-filter-service-%d{yyyy-MM-dd_HH-mm}.log.gz"
+			ignoreExceptions="false">
+			<PatternLayout
+				pattern="[%d{DEFAULT}] [%t] %-5p %c.%M(%L) %x - %m%n" />
+			<Policies>
+				<!-- As the file pattern is in minutes, this is rigged to go on exactly 
+					15, 30, 45, 00 -->
+				<TimeBasedTriggeringPolicy interval="15"
+					modulate="true" />
+			</Policies>
+			<DefaultRolloverStrategy max="300" />
+			<ThresholdFilter
+				level="${sys:fileLoggingLevel:-${env:fileLoggingLevel:-OFF}}"
+				onMatch="ACCEPT" onMismatch="DENY" />
+		</RollingFile>
+
+		<FluentAppender name="Fluent"
+			service="${sys:remoteLoggingService:-${env:remoteLoggingService:-DISABLED}}"
+			tag="${sys:APP_FUNCTION:-${env:APP_FUNCTION:-entellect}}"
+			mdcKeys="environment,messageCorrelationId,synchronicity,service,sourceUri,executionStatus">
+			<ThresholdFilter
+				level="${sys:remoteLoggingLevel:-${env:remoteLoggingLevel:-OFF}}"
+				onMatch="ACCEPT" onMismatch="DENY" />
+		</FluentAppender>
+
+	</Appenders>
+	<Loggers>
+		<Logger name="org.springframework.beans" level="warn"
+			additivity="true">
+			<AppenderRef ref="Console" />
+			<AppenderRef ref="RollingFile" />
+		</Logger>
+		<Root level="all">
+			<!-- To enable / disable appenders use the system properties in their 
+				thresholds. -->
+			<AppenderRef ref="Console" />
+			<AppenderRef ref="RollingFile" />
+			<AppenderRef ref="Fluent" />
+		</Root>
+	</Loggers>
+</Configuration>
