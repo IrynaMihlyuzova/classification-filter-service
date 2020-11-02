@@ -1,42 +1,48 @@
 package com.elsevier.entellect.service.processors;
 
-import com.elsevier.ces.property.keys.ExchangePropertyKey;
-import com.elsevier.entellect.service.ClassificationFilterServiceConfiguration;
-import com.elsevier.entellect.service.entity.NotificationJson;
+
+import com.elsevier.entellect.service.ClassificationCodesLoader;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.springframework.stereotype.Component;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.io.IOException;
+import java.util.*;
+
+import static org.springframework.util.CollectionUtils.containsAny;
 
 @Component("NotificationFilterProcessor")
 public class NotificationFilterProcessor implements Processor {
 
+    public static final String JSON_CLASSIFICATION_FIELD = "patent_classification";
+
+    private ClassificationCodesLoader classificationCodesLoader;
+
+    public NotificationFilterProcessor(ClassificationCodesLoader classificationCodesLoader) {
+        this.classificationCodesLoader = classificationCodesLoader;
+    }
+
     @Override
     public void process(Exchange exchange) throws Exception {
-        exchange.setProperty(ExchangePropertyKey.MESSAGE_CORRELATION_ID.getLabel(), exchange.getIn().getMessageId());
+        String notificationAsString = exchange.getIn().getBody(String.class);
+        exchange.getIn().setBody(filterByClassification(notificationAsString));
     }
 
-    public boolean filterByClassification(Exchange exchange) throws Exception {
-        NotificationJson notificationJson = getNotification(exchange);
-        List<String> classificationList = notificationJson.getMessageEvent().getEvtDetails().get(0).getPatentClassification();
+    public boolean filterByClassification(String notificationAsString) throws IOException {
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonNodeClassification = objectMapper.readTree(notificationAsString);
+        ArrayNode jsonNodes = (ArrayNode) jsonNodeClassification.get(JSON_CLASSIFICATION_FIELD);
+
         Set<String> subjectList = new HashSet<>();
-        classificationList.forEach(classification -> subjectList.add(classification.substring(0,4)));
+        jsonNodes.forEach(jsonNode -> subjectList.add(jsonNode.asText().substring(0,4)));
 
-        Set<String> classificationCodes = ClassificationFilterServiceConfiguration.getClassificationCodes();
-        for (String code:classificationCodes){
-            if(subjectList.contains(code)){
-                return true;
-            }
-        }
-        return false;
+        Set<String> classificationCodes = classificationCodesLoader.getClassificationCodes();
 
-    }
+        return containsAny(subjectList, classificationCodes);
 
-    public NotificationJson getNotification(Exchange exchange) throws Exception {
-        String bodyIn = exchange.getIn().getBody(String.class);
-        return NotificationJson.fromJSON(bodyIn);
     }
 }

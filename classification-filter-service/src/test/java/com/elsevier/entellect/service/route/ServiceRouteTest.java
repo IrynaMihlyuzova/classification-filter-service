@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
+import com.elsevier.entellect.service.ClassificationCodesLoader;
 import com.elsevier.entellect.service.processors.NotificationFilterProcessor;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
@@ -124,7 +125,7 @@ public class ServiceRouteTest extends AdviceWithCamelTestSupport {
         return new ClassificationFilterServiceConfiguration().asynchronousServiceRoute("mySqsQueue",0,
                 new ClaimAsByteArrayClaimRetriever(uriHandlers),
                 claimGranter(),
-                new NotificationFilterProcessor(),
+                new NotificationFilterProcessor(new ClassificationCodesLoader(uriHandlers, "", "")),
                 new SqsQueueNameToCamelEndpointUri("1234"),
                 true
         );

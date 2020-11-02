@@ -5,11 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import com.elsevier.entellect.service.entity.MessageEvent;
-import com.elsevier.entellect.service.entity.NotificationJson;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ObjectUtils;
-import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +17,7 @@ import com.elsevier.ces.textandannotationsets.MessageWithTextAndAnnotationSets;
  * {@link EnrichService} implementation for the service.
  */
 @Service("ClassificationFilterService")
-public class ClassificationFilterService {
+public class ClassificationFilterService implements EnrichService {
 	
 	private static final String ENTITIES_ANNOTATION_SET_NAME = "entities";
 	    
@@ -38,7 +34,8 @@ public class ClassificationFilterService {
 	 * @return the enriched {@link MessageWithTextAndAnnotationSets}
 	 */
 
-/*	public MessageWithTextAndAnnotationSets enrich(MessageWithTextAndAnnotationSets input, Map<String, Object> parameters) {
+	@Override
+	public MessageWithTextAndAnnotationSets enrich(MessageWithTextAndAnnotationSets input, Map<String, Object> parameters) {
 
 
 		final String annotationSetName =
@@ -60,10 +57,6 @@ public class ClassificationFilterService {
 		}
 
 		return enriched;
-	}*/
 
-	public MessageEvent notificationParser(MessageWithTextAndAnnotationSets input){
-		NotificationJson notificationJson = NotificationJson.fromJSON(input.getText());
-		return notificationJson.getMessageEvent();
 	}
 }

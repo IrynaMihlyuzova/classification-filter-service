@@ -1,58 +1,66 @@
 package com.elsevier.entellect.service;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
+import com.elsevier.cef.common.uri.UriHandlers;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.Collections;
+import javax.annotation.PostConstruct;
 import java.util.HashSet;
 import java.util.Set;
+
+import static java.lang.String.format;
+import static java.util.Collections.addAll;
 
 @Component("ClassificationCodesLoader")
 public class ClassificationCodesLoader {
 
-/*    private final Set<String> classificationCodes = new HashSet<>();
+    private final String bucketName;
 
-    @Scheduled(cron = "* * * ? * *")
-    public void scheduleTaskUsingCronExpression() {
-        long now = System.currentTimeMillis() / 1000;
-        System.out.println("schedule tasks using cron jobs - " + now);
+    private final String key;
 
-        AmazonS3 s3Client = ClassificationFilterServiceConfiguration.s3Client();
+    private Set<String> classificationCodes;
 
-        String bucketName = "entellect-enrichment-services-mihlyuzovai";
-        String key = "classification-codes/classification_codes.properties";
+    private UriHandlers uriHandlers;
 
-        System.out.println("Downloading an object");
+    private Object lock = new Object();
 
-        try (final S3Object fullObject = s3Client.getObject(new GetObjectRequest(bucketName, key));
-        final S3ObjectInputStream inputStream = fullObject.getObjectContent()){
+    @PostConstruct
+    public void onStartup() {
+        reloadClassificationCodes();
+    }
+    //TODO this property could be move to application.properties file
+    @Scheduled(cron="0 0 6 * * ?")
+    public void onSchedule() {
+        reloadClassificationCodes();
+    }
 
-            String propertiesContent = null;
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-            StringBuilder buffer = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                buffer.append(line);
-            }
-            propertiesContent = buffer.toString();
-            Collections.addAll(classificationCodes, propertiesContent.split(","));
+    @Autowired
+    public ClassificationCodesLoader(UriHandlers uriHandlers, @Value("entellect-enrichment-services-mihlyuzovai") String bucketName, @Value("classification-codes/classification_codes.properties") String key) {
+        this.uriHandlers  = uriHandlers;
+        this.bucketName = bucketName;
+        this.key  = key;
+    }
 
-            System.out.println("properties = " + propertiesContent);
+    private void reloadClassificationCodes() {
+        String classificationCodesReferenceData = uriHandlers.readUriAsString(format("s3://%s/%s", bucketName, key));
 
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
+        String classificationCodesReferenceDataWithoutSpace = classificationCodesReferenceData.replaceAll("\\s+","");
+        Set classificationCodes = new HashSet<>();
+        addAll(classificationCodes, classificationCodesReferenceDataWithoutSpace.split(","));
+
+        System.out.println("Downloading an object = " +classificationCodesReferenceDataWithoutSpace);
+
+        synchronized(lock) {
+            this.classificationCodes = classificationCodes;
         }
-
     }
 
     public Set<String> getClassificationCodes() {
-        return classificationCodes;
-    }*/
+        synchronized(lock) {
+            return classificationCodes;
+        }
+    }
+
 }

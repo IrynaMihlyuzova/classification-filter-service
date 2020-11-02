@@ -30,14 +30,14 @@ public class ClassificationFilterServiceSynchronousController {
 
     private static final Logger LOG = LoggerFactory.getLogger(ClassificationFilterServiceSynchronousController.class);
 
-    @PostMapping(path = "C:/Program Files/Git/classificationFilter",
+    @PostMapping(path = "/classificationFilter",
             headers=("content-type=multipart/*"),
             consumes = MULTIPART_FORM_DATA_VALUE,
             produces = APPLICATION_JSON_UTF8_VALUE)
-    public String sentenceService(@RequestParam("file") MultipartFile inputFile,
+    public String classificationFilterService(@RequestParam("file") MultipartFile inputFile,
                                @RequestParam(value = "correlationId", required = false) String messageCorrelationId) {
         try {
-            return service.enrich(inputFile.getBytes(), URN_SOURCE_URI_UNKNOWN, RNF2.getLabel(), messageCorrelationId, emptyMap());
+            return service.enrich(inputFile.getBytes(), URN_SOURCE_URI_UNKNOWN, RNF2.getLabel(), RNF2.getLabel(), messageCorrelationId, emptyMap());
         } catch (IOException e) {
             String error = format("Unable to read the uploaded file %s", inputFile.getName());
             LOG.error(error);

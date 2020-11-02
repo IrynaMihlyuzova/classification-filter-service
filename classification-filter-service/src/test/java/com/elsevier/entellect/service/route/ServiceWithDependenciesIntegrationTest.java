@@ -5,6 +5,9 @@ import static com.elsevier.ces.property.keys.ExchangePropertyKey.RESULT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 
+import com.elsevier.unstructured.ingest.format.conversion.api.InputAdapter;
+import com.elsevier.unstructured.ingest.format.conversion.api.OutputAdapter;
+import com.elsevier.unstructured.ingest.format.conversion.tsv.configuration.FormatConversionTsvConfiguration;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.junit.Test;

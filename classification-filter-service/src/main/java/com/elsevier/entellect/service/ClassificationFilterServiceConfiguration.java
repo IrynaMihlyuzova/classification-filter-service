@@ -10,6 +10,7 @@ import com.elsevier.ces.adapters.jsonld.ProvenanceApplier;
 import com.elsevier.ces.logging.LoggingBean;
 import com.elsevier.ces.logging.LoggingBeanPropertyPopulator;
 import com.elsevier.ces.property.keys.ExchangePropertyKey;
+import com.elsevier.ces.textandannotationsets.EnrichService;
 import com.elsevier.unstructured.ingest.format.conversion.api.InputAdapter;
 import com.elsevier.unstructured.ingest.format.conversion.api.OutputAdapter;
 import org.apache.camel.Processor;
@@ -22,7 +23,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.Scheduled;
+import com.elsevier.ces.textandannotationsets.EnrichService;
 
 import javax.annotation.PostConstruct;
 import java.io.BufferedReader;
@@ -67,9 +68,7 @@ public class ClassificationFilterServiceConfiguration {
 
 	public static final String SERVICE_NAME = "classification-filter-service";
 
-//	public static final String SERVICE_BEAN_HANDLER_METHOD_EXPRESSION = format("enrich(${body}, ${property.%s})", PARAMETERS.getLabel());
-
-	public static final String SERVICE_BEAN_HANDLER_METHOD_EXPRESSION = format("notificationParser(${body})");
+	public static final String SERVICE_BEAN_HANDLER_METHOD_EXPRESSION = format("enrich(${body}, ${property.%s})", PARAMETERS.getLabel());
 
 	private static final String DIRECT_SYNC_SERVICE_ROUTE = "direct:syncServiceRoute";
 
@@ -84,7 +83,7 @@ public class ClassificationFilterServiceConfiguration {
 			@Value("${sqs.environment.aware.queue}") String serviceQueueName,
 			@Value("${sqs.queue.listener.number.of.threads}") int numberOfThreads,
 			@Qualifier("ClaimAsStringClaimRetriever") Processor claimAsStringClaimRetriever,
-			ClaimGranter claimGranter,
+			final ClaimGranter claimGranter,
 			@Qualifier("NotificationFilterProcessor") Processor filterProcessor,
 			@Qualifier("sqsQueueNameToCamelEndpointUri") Function<String, String> sqsQueueNameToCamelEndpointUri,
 			@Value("${autostart.asynchronous.camel.routes}") boolean autoStartAsyncRoutes) {
@@ -95,16 +94,18 @@ public class ClassificationFilterServiceConfiguration {
 
 				onException(Exception.class).to(DIRECT_ERROR_HANDLING).handled(true);
 
+				// todo send valid notification to the queue
 				from(serviceInputQueue()).routeId(ASYNC_SERVICE_ROUTE)
 						.autoStartup(autoStartAsyncRoutes)
 						.threads(numberOfThreads)
 						.process(new LoggingBeanPropertyPopulator(SERVICE_NAME, ASYNCHRONOUS))
+						.process(claimAsStringClaimRetriever).setBody(simple(bodyExpression))
+						.log(body().toString())
 						.process(filterProcessor)
-						.bean(filterProcessor,"filterByClassification")
-						// todo send valid notification to the queue
-//						.process(claimAsStringClaimRetriever).setBody(simple(bodyExpression))
-//						.to(DIRECT_SERVICE_INVOKER_ROUTE).bean(claimGranter)
+						//.to(DIRECT_SERVICE_INVOKER_ROUTE)
+//						.bean(claimGranter)
 						.bean(new LoggingBean());
+
 			}
 
 			private String serviceInputQueue() {
@@ -134,8 +135,7 @@ public class ClassificationFilterServiceConfiguration {
 	public RouteBuilder serviceInvokerRoute(
 			ServiceManagementLoggingConfiguration serviceManagementLoggingConfiguration,
 			ProvenanceConfiguration provenanceConfiguration,
-//			@Qualifier("ClassificationFilterService") EnrichService service,
-			ClassificationFilterService classificationFilterService,
+			@Qualifier("ClassificationFilterService") EnrichService service,
 			final InputAdapter inputAdapter, final OutputAdapter outputAdapter) {
 		return new RouteBuilder() {
 			@Override
@@ -143,14 +143,15 @@ public class ClassificationFilterServiceConfiguration {
 				onException(Exception.class).to(DIRECT_ERROR_HANDLING).handled(true);
 				from(DIRECT_SERVICE_INVOKER_ROUTE)
 						.process(serviceManagementLoggingConfiguration.getStartTimeSetter())
-						.bean(inputAdapter, InputAdapter.CAMEL_BEAN_METHOD_EXPRESSION)
+//						.bean(inputAdapter, InputAdapter.CAMEL_BEAN_METHOD_EXPRESSION)
 						.setProperty(SOURCE_CONTENT.getLabel(), simple("${body}"))
+						.log("body in serviceRote "+body().toString())
 						.process(provenanceConfiguration.getProvenanceProvider())
-//						.bean(service, SERVICE_BEAN_HANDLER_METHOD_EXPRESSION)
-						.bean(classificationFilterService, SERVICE_BEAN_HANDLER_METHOD_EXPRESSION)
+						.bean(service, SERVICE_BEAN_HANDLER_METHOD_EXPRESSION)
 						.bean(provenanceConfiguration.getProvenanceApplier(), "applyTo(${body}, java.util.Collections#singletonList('entities'))")
 						.bean(outputAdapter, OutputAdapter.CAMEL_BEAN_METHOD_EXPRESSION)
 						.process(serviceManagementLoggingConfiguration.getEndTimeSetter());
+
 			}
 		};
 	}
@@ -159,7 +160,7 @@ public class ClassificationFilterServiceConfiguration {
 	 * @return A standard AWS S3 client.
 	 */
 	@Bean
-	public static AmazonS3 s3Client() {
+	public AmazonS3 s3Client() {
 		return AmazonS3ClientBuilder
 				.standard()
 				.withRegion(EU_WEST_1)
@@ -186,44 +187,5 @@ public class ClassificationFilterServiceConfiguration {
 	@Bean
 	public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
 		return new PropertySourcesPlaceholderConfigurer();
-	}
-
-	@PostConstruct
-	public void onStartup() {
-		reloadClassificationCodes();
-	}
-
-	@Scheduled(cron="0 0 6 * * ?")
-	public void onSchedule() {
-		reloadClassificationCodes();
-	}
-
-	public void reloadClassificationCodes() {
-		AmazonS3 s3Client = ClassificationFilterServiceConfiguration.s3Client();
-
-		System.out.println("Downloading an object");
-
-		try (final S3Object fullObject = s3Client.getObject(new GetObjectRequest(bucketName, key));
-			 final S3ObjectInputStream inputStream = fullObject.getObjectContent()){
-
-			String propertiesContent;
-			BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-			StringBuilder buffer = new StringBuilder();
-			String line;
-			while ((line = reader.readLine()) != null) {
-				buffer.append(line);
-			}
-			propertiesContent = buffer.toString().replaceAll("\\s+","");
-			Collections.addAll(classificationCodes, propertiesContent.split(","));
-
-			System.out.println("properties = " + propertiesContent);
-
-		} catch (IOException ioException) {
-			ioException.printStackTrace();
-		}
-	}
-
-	public static Set<String> getClassificationCodes() {
-		return classificationCodes;
 	}
 }
