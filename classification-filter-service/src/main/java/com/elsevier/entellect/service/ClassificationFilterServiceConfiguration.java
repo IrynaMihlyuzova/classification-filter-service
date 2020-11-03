@@ -2,14 +2,10 @@ package com.elsevier.entellect.service;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.elsevier.ces.adapters.claimcheck.ClaimGranter;
 import com.elsevier.ces.adapters.jsonld.ProvenanceApplier;
 import com.elsevier.ces.logging.LoggingBean;
 import com.elsevier.ces.logging.LoggingBeanPropertyPopulator;
-import com.elsevier.ces.property.keys.ExchangePropertyKey;
 import com.elsevier.ces.textandannotationsets.EnrichService;
 import com.elsevier.unstructured.ingest.format.conversion.api.InputAdapter;
 import com.elsevier.unstructured.ingest.format.conversion.api.OutputAdapter;
@@ -23,15 +19,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import com.elsevier.ces.textandannotationsets.EnrichService;
-
-import javax.annotation.PostConstruct;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.function.Function;
 
 import static com.amazonaws.regions.Regions.EU_WEST_1;
@@ -68,15 +55,10 @@ public class ClassificationFilterServiceConfiguration {
 
 	public static final String SERVICE_NAME = "classification-filter-service";
 
-	public static final String SERVICE_BEAN_HANDLER_METHOD_EXPRESSION = format("enrich(${body}, ${property.%s})", PARAMETERS.getLabel());
+//	public static final String SERVICE_BEAN_HANDLER_METHOD_EXPRESSION = format("enrich(${body}, ${property.%s})", PARAMETERS.getLabel());
+	public static final String SERVICE_BEAN_HANDLER_METHOD_EXPRESSION = format("enrich(null, ${property.%s})", PARAMETERS.getLabel());
 
 	private static final String DIRECT_SYNC_SERVICE_ROUTE = "direct:syncServiceRoute";
-
-	private static final String bucketName = "entellect-enrichment-services-mihlyuzovai";
-
-	private static final String key = "classification-codes/classification_codes.properties";
-
-	private static final Set<String> classificationCodes = new HashSet<>();
 
 	@Bean
 	public RouteBuilder asynchronousServiceRoute(
@@ -84,7 +66,6 @@ public class ClassificationFilterServiceConfiguration {
 			@Value("${sqs.queue.listener.number.of.threads}") int numberOfThreads,
 			@Qualifier("ClaimAsStringClaimRetriever") Processor claimAsStringClaimRetriever,
 			final ClaimGranter claimGranter,
-			@Qualifier("NotificationFilterProcessor") Processor filterProcessor,
 			@Qualifier("sqsQueueNameToCamelEndpointUri") Function<String, String> sqsQueueNameToCamelEndpointUri,
 			@Value("${autostart.asynchronous.camel.routes}") boolean autoStartAsyncRoutes) {
 		return new RouteBuilder() {
@@ -94,16 +75,13 @@ public class ClassificationFilterServiceConfiguration {
 
 				onException(Exception.class).to(DIRECT_ERROR_HANDLING).handled(true);
 
-				// todo send valid notification to the queue
 				from(serviceInputQueue()).routeId(ASYNC_SERVICE_ROUTE)
 						.autoStartup(autoStartAsyncRoutes)
 						.threads(numberOfThreads)
 						.process(new LoggingBeanPropertyPopulator(SERVICE_NAME, ASYNCHRONOUS))
 						.process(claimAsStringClaimRetriever).setBody(simple(bodyExpression))
-						.log(body().toString())
-						.process(filterProcessor)
-						//.to(DIRECT_SERVICE_INVOKER_ROUTE)
-//						.bean(claimGranter)
+						.to(DIRECT_SERVICE_INVOKER_ROUTE)
+						.bean(claimGranter)
 						.bean(new LoggingBean());
 
 			}
@@ -114,28 +92,34 @@ public class ClassificationFilterServiceConfiguration {
 		};
 	}
 
-/*	@Bean
+	@Bean
 	public RouteBuilder synchronousServiceRoute(
 			@Value("${autostart.synchronous.camel.routes}") final boolean autoStartSynchronousRoutes,
 			@Qualifier("ExtractDocumentFromInput") final Processor extractDocumentFromInput) {
 		return new RouteBuilder() {
+			String bodyExpression = format("${property.%s}", SOURCE_CONTENT.getLabel());
+
 			@Override
 			public void configure() {
 				onException(Exception.class).to(DIRECT_ERROR_HANDLING).handled(true);
 				from(DIRECT_SYNC_SERVICE_ROUTE).id(SYNC_SERVICE_ROUTE)
 						.autoStartup(autoStartSynchronousRoutes)
+
 						.process(new LoggingBeanPropertyPopulator(SERVICE_NAME, SYNCHRONOUS))
-						.process(extractDocumentFromInput).to(DIRECT_SERVICE_INVOKER_ROUTE)
+						//.process(extractDocumentFromInput)
+						.setBody(simple(bodyExpression))
+						.to(DIRECT_SERVICE_INVOKER_ROUTE)
 						.bean(new LoggingBean());
 			}
 		};
-	}*/
+	}
 
 	@Bean
 	public RouteBuilder serviceInvokerRoute(
 			ServiceManagementLoggingConfiguration serviceManagementLoggingConfiguration,
 			ProvenanceConfiguration provenanceConfiguration,
 			@Qualifier("ClassificationFilterService") EnrichService service,
+			@Qualifier("NotificationFilterProcessor") Processor filterProcessor,
 			final InputAdapter inputAdapter, final OutputAdapter outputAdapter) {
 		return new RouteBuilder() {
 			@Override
@@ -143,13 +127,8 @@ public class ClassificationFilterServiceConfiguration {
 				onException(Exception.class).to(DIRECT_ERROR_HANDLING).handled(true);
 				from(DIRECT_SERVICE_INVOKER_ROUTE)
 						.process(serviceManagementLoggingConfiguration.getStartTimeSetter())
-//						.bean(inputAdapter, InputAdapter.CAMEL_BEAN_METHOD_EXPRESSION)
-						.setProperty(SOURCE_CONTENT.getLabel(), simple("${body}"))
-						.log("body in serviceRote "+body().toString())
+						.bean(filterProcessor, "process")
 						.process(provenanceConfiguration.getProvenanceProvider())
-						.bean(service, SERVICE_BEAN_HANDLER_METHOD_EXPRESSION)
-						.bean(provenanceConfiguration.getProvenanceApplier(), "applyTo(${body}, java.util.Collections#singletonList('entities'))")
-						.bean(outputAdapter, OutputAdapter.CAMEL_BEAN_METHOD_EXPRESSION)
 						.process(serviceManagementLoggingConfiguration.getEndTimeSetter());
 
 			}

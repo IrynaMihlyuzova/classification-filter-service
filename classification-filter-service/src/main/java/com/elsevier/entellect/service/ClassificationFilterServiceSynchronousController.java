@@ -8,6 +8,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_UTF8_VALUE;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 
 import java.io.IOException;
+import java.util.HashMap;
 
 import org.apache.camel.Produce;
 import org.slf4j.Logger;
@@ -37,7 +38,7 @@ public class ClassificationFilterServiceSynchronousController {
     public String classificationFilterService(@RequestParam("file") MultipartFile inputFile,
                                @RequestParam(value = "correlationId", required = false) String messageCorrelationId) {
         try {
-            return service.enrich(inputFile.getBytes(), URN_SOURCE_URI_UNKNOWN, RNF2.getLabel(), RNF2.getLabel(), messageCorrelationId, emptyMap());
+            return service.enrich(inputFile.getBytes(), URN_SOURCE_URI_UNKNOWN, RNF2.getLabel(), RNF2.getLabel(), messageCorrelationId, new HashMap<>());
         } catch (IOException e) {
             String error = format("Unable to read the uploaded file %s", inputFile.getName());
             LOG.error(error);

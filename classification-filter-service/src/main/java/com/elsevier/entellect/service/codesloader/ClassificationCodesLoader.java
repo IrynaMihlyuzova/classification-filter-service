@@ -1,4 +1,4 @@
-package com.elsevier.entellect.service;
+package com.elsevier.entellect.service.codesloader;
 
 import com.elsevier.cef.common.uri.UriHandlers;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +37,7 @@ public class ClassificationCodesLoader {
     }
 
     @Autowired
-    public ClassificationCodesLoader(UriHandlers uriHandlers, @Value("entellect-enrichment-services-mihlyuzovai") String bucketName, @Value("classification-codes/classification_codes.properties") String key) {
+    public ClassificationCodesLoader(UriHandlers uriHandlers, @Value("entellect-enrichment-services-mihlyuzovai") String bucketName, @Value("bibliography-classification-codes/classification_codes.properties") String key) {
         this.uriHandlers  = uriHandlers;
         this.bucketName = bucketName;
         this.key  = key;

@@ -1,9 +1,6 @@
 package com.elsevier.entellect.service;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,9 +40,11 @@ public class ClassificationFilterService implements EnrichService {
 												  		  .orElse(Collections.emptyMap())
 												  		  .get(PARAMETERS_KEY_FOR_ANNOTATION_SET_NAME), ENTITIES_ANNOTATION_SET_NAME);
 
-		final MessageWithTextAndAnnotationSets enriched =
+/*		final MessageWithTextAndAnnotationSets enriched =
 				MessageWithTextAndAnnotationSets.fromAnnotationSets(input.getAnnotationSets());
-		final List<Annotation> wrapper = enriched.createNewAnnotationSetIfAbsent(annotationSetName);
+		final List<Annotation> wrapper = enriched.createNewAnnotationSetIfAbsent(annotationSetName);*/
+
+		final List<Annotation> wrapper = new ArrayList<>();
 
 		if (!wrapper.isEmpty()) {
 
@@ -56,7 +55,7 @@ public class ClassificationFilterService implements EnrichService {
 			Optional.ofNullable(enrichedMessage.getUnmodifiableAnnotationSet(annotationSetName)).ifPresent(wrapper::addAll);
 		}
 
-		return enriched;
+		return new MessageWithTextAndAnnotationSets();
 
 	}
 }

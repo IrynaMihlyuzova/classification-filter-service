@@ -1,14 +1,11 @@
 package com.elsevier.entellect.service;
 
-import com.elsevier.ces.unit.test.FixtureUtil;
+import com.elsevier.entellect.service.codesloader.ClassificationCodesLoader;
 import com.elsevier.entellect.service.processors.NotificationFilterProcessor;
 import com.elsevier.smd.issuetracing.Issue;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.io.IOException;

@@ -1,11 +1,12 @@
 package com.elsevier.entellect.service.processors;
 
 
-import com.elsevier.entellect.service.ClassificationCodesLoader;
+import com.elsevier.entellect.service.codesloader.ClassificationCodesLoader;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.camel.Exchange;
+import org.apache.camel.ExchangeProperty;
 import org.apache.camel.Processor;
 import org.springframework.stereotype.Component;
 
@@ -27,8 +28,13 @@ public class NotificationFilterProcessor implements Processor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        String notificationAsString = exchange.getIn().getBody(String.class);
-        exchange.getIn().setBody(filterByClassification(notificationAsString));
+/*        String notificationAsString = exchange.getIn().getBody(String.class);
+        Map<String,Object> parameters = exchange.getProperty(ExchangePropertyKey.PARAMETERS.getName(), Map.class);
+        parameters.put("filter",filterByClassification(notificationAsString));*/
+    }
+
+    public void process(String body, @ExchangeProperty("parameters") Map<String,Object> parameters) throws IOException {
+        parameters.put("filter", filterByClassification(body));
     }
 
     public boolean filterByClassification(String notificationAsString) throws IOException {

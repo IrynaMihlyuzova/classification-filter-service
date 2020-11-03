@@ -10,7 +10,12 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
-import com.elsevier.entellect.service.ClassificationCodesLoader;
+import com.elsevier.ces.adapters.jsonld.ProvenanceApplier;
+import com.elsevier.ces.logging.EndTimeSetter;
+import com.elsevier.ces.logging.StartTimeSetter;
+import com.elsevier.entellect.service.*;
+import com.elsevier.entellect.service.codesloader.ClassificationCodesLoader;
+import com.elsevier.entellect.service.processors.ClassificationFilterServiceProvenanceProvider;
 import com.elsevier.entellect.service.processors.NotificationFilterProcessor;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
@@ -27,7 +32,6 @@ import org.mockito.junit.MockitoJUnitRunner;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.elsevier.cef.common.uri.UriHandler;
 import com.elsevier.cef.common.uri.UriHandlers;
-import com.elsevier.entellect.service.ClassificationFilterServiceConfiguration;
 import com.elsevier.ces.adapters.claimcheck.ClaimGranter;
 import com.elsevier.ces.adapters.claimcheck.ClaimAsByteArrayClaimRetriever;
 import com.elsevier.ces.adapters.claimcheck.SqsQueueNameToCamelEndpointUri;
@@ -77,20 +81,21 @@ public class ServiceRouteTest extends AdviceWithCamelTestSupport {
                 replaceFromWith(MOCK_DIRECT_SENTENCE_SERVICE_QUEUE);
             }
         };
-
+*/
 		ServiceManagementLoggingConfiguration serviceManagementLoggingConfiguration = new ServiceManagementLoggingConfiguration(
 				new StartTimeSetter(), new EndTimeSetter());
 
-		FormatConversionServiceProvenanceProvider provenanceProvider = new FormatConversionServiceProvenanceProvider("0acc34-a22132-356aec-6743bd", "1.5",
+		ClassificationFilterServiceProvenanceProvider provenanceProvider = new ClassificationFilterServiceProvenanceProvider("0acc34-a22132-356aec-6743bd", "1.5",
 				"entellect-classification-filter-service");
 
 		ProvenanceConfiguration provenanceConfiguration = new ProvenanceConfiguration(provenanceProvider, new ProvenanceApplier(null));
 
-		context.addRoutes(new FormatConversionServiceConfiguration().serviceInvokerRoute(
-				serviceManagementLoggingConfiguration, provenanceConfiguration, new FormatConversionService(),
+		context.addRoutes(new ClassificationFilterServiceConfiguration().serviceInvokerRoute(
+				serviceManagementLoggingConfiguration, provenanceConfiguration, new ClassificationFilterService(),
+				new NotificationFilterProcessor(new ClassificationCodesLoader(uriHandlers, "", "")),
 				new InputAdapter(asList(new FormatConversionTsvConfiguration().atLeastOneTsvInputFormatConverter())),
 				new OutputAdapter(asList(new FormatConversionTsvConfiguration().atLeastOneTsvOutputFormatConverter()))));
-
+/*
         claimChecks = new ClaimChecks(asList(new SqsClaimCheckNotificationReceiver(amazonSQS)), asList(new SqsClaimCheckNotificationSender(amazonSQS)));
         
         context.addRoutes(new ExceptionHandlerRoute().exceptionHandlingRoute(claimGranter(), new ExceptionHandler(), new HydraJsonLdMarshaller()));
@@ -125,7 +130,6 @@ public class ServiceRouteTest extends AdviceWithCamelTestSupport {
         return new ClassificationFilterServiceConfiguration().asynchronousServiceRoute("mySqsQueue",0,
                 new ClaimAsByteArrayClaimRetriever(uriHandlers),
                 claimGranter(),
-                new NotificationFilterProcessor(new ClassificationCodesLoader(uriHandlers, "", "")),
                 new SqsQueueNameToCamelEndpointUri("1234"),
                 true
         );

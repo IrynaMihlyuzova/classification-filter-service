@@ -4,6 +4,8 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.elsevier.cef.common.uri.UriHandlers;
 import com.elsevier.ces.uri.S3UriHandler;
+import com.elsevier.entellect.service.codesloader.BibliographyCodesLoader;
+import com.elsevier.entellect.service.codesloader.ClassificationCodesLoader;
 import com.elsevier.smd.issuetracing.Issue;
 import com.elsevier.smd.junit.rules.s3.LocalS3;
 import org.junit.ClassRule;
