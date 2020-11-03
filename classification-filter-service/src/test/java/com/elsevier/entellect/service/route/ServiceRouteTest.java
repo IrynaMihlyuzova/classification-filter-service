@@ -14,9 +14,7 @@ import com.elsevier.ces.adapters.jsonld.ProvenanceApplier;
 import com.elsevier.ces.logging.EndTimeSetter;
 import com.elsevier.ces.logging.StartTimeSetter;
 import com.elsevier.entellect.service.*;
-import com.elsevier.entellect.service.codesloader.ClassificationCodesLoader;
 import com.elsevier.entellect.service.processors.ClassificationFilterServiceProvenanceProvider;
-import com.elsevier.entellect.service.processors.NotificationFilterProcessor;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.RouteBuilder;
@@ -91,10 +89,7 @@ public class ServiceRouteTest extends AdviceWithCamelTestSupport {
 		ProvenanceConfiguration provenanceConfiguration = new ProvenanceConfiguration(provenanceProvider, new ProvenanceApplier(null));
 
 		context.addRoutes(new ClassificationFilterServiceConfiguration().serviceInvokerRoute(
-				serviceManagementLoggingConfiguration, provenanceConfiguration, new ClassificationFilterService(),
-				new NotificationFilterProcessor(new ClassificationCodesLoader(uriHandlers, "", "")),
-				new InputAdapter(asList(new FormatConversionTsvConfiguration().atLeastOneTsvInputFormatConverter())),
-				new OutputAdapter(asList(new FormatConversionTsvConfiguration().atLeastOneTsvOutputFormatConverter()))));
+				serviceManagementLoggingConfiguration, provenanceConfiguration));
 /*
         claimChecks = new ClaimChecks(asList(new SqsClaimCheckNotificationReceiver(amazonSQS)), asList(new SqsClaimCheckNotificationSender(amazonSQS)));
         

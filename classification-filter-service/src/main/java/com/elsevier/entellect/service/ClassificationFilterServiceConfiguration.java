@@ -6,9 +6,9 @@ import com.elsevier.ces.adapters.claimcheck.ClaimGranter;
 import com.elsevier.ces.adapters.jsonld.ProvenanceApplier;
 import com.elsevier.ces.logging.LoggingBean;
 import com.elsevier.ces.logging.LoggingBeanPropertyPopulator;
-import com.elsevier.ces.textandannotationsets.EnrichService;
-import com.elsevier.unstructured.ingest.format.conversion.api.InputAdapter;
-import com.elsevier.unstructured.ingest.format.conversion.api.OutputAdapter;
+import com.elsevier.ces.property.keys.ExchangePropertyKey;
+import com.elsevier.entellect.service.filter.BibliographyFilter;
+import com.elsevier.entellect.service.filter.DataScienceFilter;
 import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -19,6 +19,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.scheduling.annotation.EnableScheduling;
+
+import java.util.Map;
 import java.util.function.Function;
 
 import static com.amazonaws.regions.Regions.EU_WEST_1;
@@ -60,6 +62,10 @@ public class ClassificationFilterServiceConfiguration {
 
 	private static final String DIRECT_SYNC_SERVICE_ROUTE = "direct:syncServiceRoute";
 
+	private static final String BIBLIOGRAPHIC_FLOW = "bibliographic";
+
+	private static final String DATASCIENCE_FLOW = "datascience";
+
 	@Bean
 	public RouteBuilder asynchronousServiceRoute(
 			@Value("${sqs.environment.aware.queue}") String serviceQueueName,
@@ -97,7 +103,7 @@ public class ClassificationFilterServiceConfiguration {
 			@Value("${autostart.synchronous.camel.routes}") final boolean autoStartSynchronousRoutes,
 			@Qualifier("ExtractDocumentFromInput") final Processor extractDocumentFromInput) {
 		return new RouteBuilder() {
-			String bodyExpression = format("${property.%s}", SOURCE_CONTENT.getLabel());
+			final String bodyExpression = format("${property.%s}", SOURCE_CONTENT.getLabel());
 
 			@Override
 			public void configure() {
@@ -117,17 +123,21 @@ public class ClassificationFilterServiceConfiguration {
 	@Bean
 	public RouteBuilder serviceInvokerRoute(
 			ServiceManagementLoggingConfiguration serviceManagementLoggingConfiguration,
-			ProvenanceConfiguration provenanceConfiguration,
-			@Qualifier("ClassificationFilterService") EnrichService service,
-			@Qualifier("NotificationFilterProcessor") Processor filterProcessor,
-			final InputAdapter inputAdapter, final OutputAdapter outputAdapter) {
+			ProvenanceConfiguration provenanceConfiguration) {
 		return new RouteBuilder() {
 			@Override
 			public void configure() {
 				onException(Exception.class).to(DIRECT_ERROR_HANDLING).handled(true);
 				from(DIRECT_SERVICE_INVOKER_ROUTE)
 						.process(serviceManagementLoggingConfiguration.getStartTimeSetter())
-						.bean(filterProcessor, "process")
+						.choice()
+						.when(exchange -> exchange.getProperty(ExchangePropertyKey.PARAMETERS.getName(), Map.class).get("flow").
+								equals(BIBLIOGRAPHIC_FLOW))
+							.bean(BibliographyFilter.class, "filter")
+						.when(exchange -> exchange.getProperty(ExchangePropertyKey.PARAMETERS.getName(), Map.class).get("flow").
+								equals(DATASCIENCE_FLOW))
+							.bean(DataScienceFilter.class, "filter")
+						.end()
 						.process(provenanceConfiguration.getProvenanceProvider())
 						.process(serviceManagementLoggingConfiguration.getEndTimeSetter());
 
