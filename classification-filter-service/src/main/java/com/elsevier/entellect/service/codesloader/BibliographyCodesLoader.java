@@ -40,33 +40,4 @@ public class BibliographyCodesLoader extends AbstractClassificationCodesLoader {
         }
     }
 
-/*    private Set<String> classificationCodes;
-
-    @Autowired
-    public BibliographyCodesLoader(UriHandlers uriHandlers, @Value("entellect-enrichment-services-mihlyuzovai") String bucketName,
-                                   @Value("bibliography-classification-codes/classification_codes.properties") String key) {
-        super(uriHandlers, bucketName, key);
-    }
-
-    @Override
-    public void reloadClassificationCodes() {
-        String classificationCodesReferenceData = getUriHandlers().readUriAsString(format("s3://%s/%s", getBucketName(), getKey()));
-
-        String classificationCodesReferenceDataWithoutSpace = classificationCodesReferenceData.replaceAll("\\s+","");
-        Set classificationCodes = new HashSet<>();
-        addAll(classificationCodes, classificationCodesReferenceDataWithoutSpace.split(","));
-
-        System.out.println("Downloading Biblio an object = " +classificationCodesReferenceDataWithoutSpace);
-
-        synchronized(getLock()) {
-            this.classificationCodes = classificationCodes;
-        }
-    }
-
-    @Override
-    public Set<String> getClassificationCodes() {
-        synchronized(getLock()) {
-            return classificationCodes;
-        }
-    }*/
 }
