@@ -1,6 +1,8 @@
 package com.elsevier.entellect.service.codesloader;
 
 import com.elsevier.cef.common.uri.UriHandlers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -13,8 +15,10 @@ import static java.util.Collections.addAll;
 @Component
 public class DataScienceCodesLoader extends AbstractClassificationCodesLoader {
 
-    public DataScienceCodesLoader(UriHandlers uriHandlers, @Value("entellect-enrichment-services-mihlyuzovai") String bucketName,
-                                   @Value("datascience-classification-codes/classification_codes.properties") String key) {
+    public static final Logger LOG = LoggerFactory.getLogger(DataScienceCodesLoader.class);
+
+    public DataScienceCodesLoader(UriHandlers uriHandlers, @Value("${bucket.name}") String bucketName,
+                                   @Value("${datascience.key.name}") String key) {
         super(uriHandlers, bucketName, key);
     }
 
@@ -25,8 +29,8 @@ public class DataScienceCodesLoader extends AbstractClassificationCodesLoader {
         String classificationCodesReferenceDataWithoutSpace = classificationCodesReferenceData.replaceAll("\\s+","");
         Set<String> classificationCodes = new HashSet<>();
         addAll(classificationCodes, classificationCodesReferenceDataWithoutSpace.split(","));
-// TODO add log
-        System.out.println("Downloading DC an object = " +classificationCodesReferenceDataWithoutSpace);
+
+        LOG.info("DataScience codes were reloaded = " + classificationCodesReferenceDataWithoutSpace);
 
         synchronized(getLock()) {
             this.classificationCodes = classificationCodes;
